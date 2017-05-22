@@ -1,0 +1,17 @@
+.wrapper {
+	position: relative;
+	left: 30px;
+	top: 30px;
+}
+.interactive-view {
+	position: absolute;
+	left: 0;
+	top: 0;
+	cursor: pointer;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
