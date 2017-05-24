@@ -121,8 +121,9 @@ export default class App extends Component {
 
 		this.onRenderCanvas = this.onRenderCanvas.bind(this);
 		this.onPieceMove = this.onPieceMove.bind(this);
+		this.onPieceRelease = this.onPieceRelease.bind(this);
 	}
-	render() {
+	render() {console.info(this.state.board);
 		const pieces = this.state.board.map((v,row) =>
 			v.map((v,col) =>
 				v >= 0 ? <Piece type={v} col={col} row={row} wCell={this.wCell} hCell={this.hCell}
@@ -155,6 +156,14 @@ export default class App extends Component {
 		//return piece.alignCenter(Math.round(pos.x/this.wCell), Math.round(pos.y/this.hCell));
 	}
 	onPieceRelease(piece, pos) {
-		return piece.alignCenter(Math.round(pos.x/this.wCell), Math.round(pos.y/this.hCell));
+		const col = Math.round(pos.x/this.wCell),
+			row = Math.round(pos.y/this.hCell);
+
+		if (false)
+			return piece.alignCenter(col, row);
+
+		this.setState({
+			board: this.state.board.map((v, r) => v.map((v, c) => r === row && c === col ? piece.props.type : v))
+		});
 	}
 }
