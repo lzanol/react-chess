@@ -75,10 +75,13 @@ class Piece extends InteractiveView {
 		this.width = 40;
 		this.height = 40;
 	}
+	componentWillUnmount() {
+		this.unmounting = true;
+	}
 	render() {
 		const pos = this.alignCenter(this.props.col, this.props.row);
 
-		return <div ref={this.onRenderElement} className='interactive-view' style={{
+		return <div ref={this.unmounting ? null : this.onRenderElement} className='interactive-view' style={{
 			fontSize: '32px',
 			textAlign: 'center',
 			textShadow: '0 0 10px #FFFFFF',
@@ -123,10 +126,10 @@ export default class App extends Component {
 		this.onPieceMove = this.onPieceMove.bind(this);
 		this.onPieceRelease = this.onPieceRelease.bind(this);
 	}
-	render() {console.info(this.state.board);
+	render() {
 		const pieces = this.state.board.map((v,row) =>
 			v.map((v,col) =>
-				v >= 0 ? <Piece type={v} col={col} row={row} wCell={this.wCell} hCell={this.hCell}
+				v > -1 ? <Piece type={v} col={col} row={row} wCell={this.wCell} hCell={this.hCell}
 					bounds={{x: 0, y: 0, width: this.width, height: this.height}}
 					onMove={this.onPieceMove}
 					onRelease={this.onPieceRelease} /> : null));
@@ -162,8 +165,13 @@ export default class App extends Component {
 		if (false)
 			return piece.alignCenter(col, row);
 
+		const board = this.state.board.map(v => v.slice());
+
+		board[row][col] = piece.props.type;
+		board[piece.props.row][piece.props.col] = -1;
+
 		this.setState({
-			board: this.state.board.map((v, r) => v.map((v, c) => r === row && c === col ? piece.props.type : v))
+			board: board
 		});
 	}
 }
