@@ -36,7 +36,15 @@ class InteractiveView extends Component {
 		this.releaseHandler = this.releaseHandler.bind(this);
 		this.onRenderElement = this.onRenderElement.bind(this);
 	}
+	componentWillUnmount() {
+		this.element.removeEventListener('mousedown', this.touchHandler);
+		document.removeEventListener('mousemove', this.moveHandler);
+		document.removeEventListener('mouseup', this.releaseHandler);
+	}
 	onRenderElement(element) {
+		if (!element)
+			return;
+
 		this.element = element;
 		element.addEventListener('mousedown', this.touchHandler);
 	}
@@ -75,13 +83,13 @@ class Piece extends InteractiveView {
 		this.width = 40;
 		this.height = 40;
 	}
-	componentWillUnmount() {
-		this.unmounting = true;
+	componentWillMount() {
+		this.isWhite = this.props.type < 6;
 	}
 	render() {
 		const pos = this.alignCenter(this.props.col, this.props.row);
 
-		return <div ref={this.unmounting ? null : this.onRenderElement} className='interactive-view' style={{
+		return <div ref={this.onRenderElement} className='interactive-view' style={{
 			fontSize: '32px',
 			textAlign: 'center',
 			textShadow: '0 0 10px #FFFFFF',
@@ -93,10 +101,22 @@ class Piece extends InteractiveView {
 		}}>{Piece.SYMBOLS[this.props.type]}</div>
 	}
 	alignCenter(col, row) {
+		if (col == null)
+			col = this.props.col;
+
+		if (row == null)
+			row = this.props.row;
+
 		return {
 			x: this.props.wCell*col + (this.props.wCell - this.width)/2,
 			y: this.props.hCell*row + (this.props.hCell - this.height)/2
 		};
+	}
+	canMove(piece) {
+		// different place
+		return (this.props.row !== piece.props.row || this.props.col !== piece.props.col)
+			// different team
+			&& this.isWhite !== piece.isWhite;
 	}
 }
 
@@ -127,9 +147,12 @@ export default class App extends Component {
 		this.onPieceRelease = this.onPieceRelease.bind(this);
 	}
 	render() {
+		this.currentMap = {};
+
 		const pieces = this.state.board.map((v,row) =>
 			v.map((v,col) =>
-				v > -1 ? <Piece type={v} col={col} row={row} wCell={this.wCell} hCell={this.hCell}
+				v > -1 ? <Piece ref={v => { if (v) this.currentMap[`${v.props.row}:${v.props.col}`] = v }}
+					type={v} col={col} row={row} wCell={this.wCell} hCell={this.hCell}
 					bounds={{x: 0, y: 0, width: this.width, height: this.height}}
 					onMove={this.onPieceMove}
 					onRelease={this.onPieceRelease} /> : null));
@@ -160,18 +183,21 @@ export default class App extends Component {
 	}
 	onPieceRelease(piece, pos) {
 		const col = Math.round(pos.x/this.wCell),
-			row = Math.round(pos.y/this.hCell);
+			row = Math.round(pos.y/this.hCell),
+			pTarget = this.currentMap[`${row}:${col}`];
 
-		if (false)
-			return piece.alignCenter(col, row);
+		// another piece already there
+		if (pTarget && !pTarget.canMove(piece))
+			// reset
+			return piece.alignCenter();
 
-		const board = this.state.board.map(v => v.slice());
+		const newBoard = this.state.board.map(v => v.slice());
 
-		board[row][col] = piece.props.type;
-		board[piece.props.row][piece.props.col] = -1;
+		newBoard[piece.props.row][piece.props.col] = -1;
+		newBoard[row][col] = piece.props.type;
 
 		this.setState({
-			board: board
+			board: newBoard
 		});
 	}
 }
