@@ -17,9 +17,9 @@ class InteractiveView extends Component {
 	set position(value) {
 		if (!this.element) return;
 
-		const b = this.props.bounds;
-		this.element.style.left = `${Math.min(Math.max(value.x, b.x), b.width - this.width)}px`;
-		this.element.style.top = `${Math.min(Math.max(value.y, b.y), b.height - this.height)}px`;
+		const pos = this.getBoundedPosition(value);
+		this.element.style.left = `${pos.x}px`;
+		this.element.style.top = `${pos.y}px`;
 	}
 	get position() {
 		return this.element ? {
@@ -35,6 +35,14 @@ class InteractiveView extends Component {
 		this.moveHandler = this.moveHandler.bind(this);
 		this.releaseHandler = this.releaseHandler.bind(this);
 		this.onRenderElement = this.onRenderElement.bind(this);
+	}
+	getBoundedPosition(pos) {
+		const b = this.props.bounds;
+
+		return {
+			x: Math.min(Math.max(pos.x, b.x), b.width - this.width),
+			y: Math.min(Math.max(pos.y, b.y), b.height - this.height)
+		};
 	}
 	componentWillUnmount() {
 		this.element.removeEventListener('mousedown', this.touchHandler);
@@ -57,13 +65,14 @@ class InteractiveView extends Component {
 		document.addEventListener('mouseup', this.releaseHandler);
 	}
 	moveHandler(e) {
-		const x = e.clientX - this.xi,
-			y = e.clientY - this.yi;
+		const pos = this.getBoundedPosition({
+			x: e.clientX - this.xi,
+			y: e.clientY - this.yi
+		});
 
 		this.position = {
-			x: x,
-			y: y,
-			...this.props.onMove(this, {x, y})
+			...pos,
+			...this.props.onMove(this, pos)
 		};
 	}
 	releaseHandler(e) {
@@ -134,7 +143,8 @@ export default class App extends Component {
 				[-1,-1,-1,-1,-1,-1,-1,-1],
 				[6,6,6,6,6,6,6,6],
 				[7,8,9,10,11,9,8,7]
-			]
+			],
+			highlights: false
 		};
 		
 		this.width = 380;
@@ -142,7 +152,6 @@ export default class App extends Component {
 		this.wCell = this.width/this.state.board[0].length;
 		this.hCell = this.height/this.state.board.length;
 
-		this.onRenderCanvas = this.onRenderCanvas.bind(this);
 		this.onPieceMove = this.onPieceMove.bind(this);
 		this.onPieceRelease = this.onPieceRelease.bind(this);
 	}
@@ -159,45 +168,72 @@ export default class App extends Component {
 
 		return (
 			<div className='wrapper'>
-				<canvas ref={this.onRenderCanvas} width={this.width} height={this.height} />
+				<canvas ref="bg" width={this.width} height={this.height} />
 				{pieces}
 			</div>
 		);
 	}
-	onRenderCanvas(elm) {
-		const ctx = elm.getContext('2d'),
+	componentDidMount() {
+		this.updateBackground();
+	}
+	componentDidUpdate() {
+		this.updateBackground();
+	}
+	updateBackground() {
+		const bg = this.refs.bg,
+			ctx = bg.getContext('2d'),
 			cols = this.state.board[0].length,
 			rows = this.state.board.length;
 		
-		for (let i = cols, j; i--;) {
-			for (j = rows; j--;) {
-				ctx.fillStyle = (j + i) & 1 ? 'green' : 'lightgreen';
-				ctx.fillRect(i*this.wCell, j*this.hCell, this.wCell, this.hCell);
+		ctx.clearRect(0, 0, bg.width, bg.height);
+
+		for (let r = rows, c; r--;) {
+			for (c = cols; c--;) {
+				ctx.fillStyle = this.state.highlights[`${r}:${c}`] ? 'blue' :
+					(r + c) & 1 ? 'green' : 'lightgreen';
+				ctx.fillRect(c*this.wCell, r*this.hCell, this.wCell, this.hCell);
 			}
 		}
 
 		ctx.strokeRect(0, 0, this.width, this.height);
 	}
 	onPieceMove(piece, pos) {
-		//return piece.alignCenter(Math.round(pos.x/this.wCell), Math.round(pos.y/this.hCell));
+		const row = Math.round(pos.y/this.hCell),
+			col = Math.round(pos.x/this.wCell);
+
+		if ((row === piece.props.row && col === piece.props.col) ||
+			(row === this.rowLastMoved && col === this.colLastMoved))
+			return;
+
+		this.rowLastMoved = row;
+		this.colLastMoved = col;
+
+		this.setState({
+			...this.state,
+			highlights: { [`${row}:${col}`]: true }
+		});
 	}
 	onPieceRelease(piece, pos) {
 		const col = Math.round(pos.x/this.wCell),
 			row = Math.round(pos.y/this.hCell),
 			pTarget = this.currentMap[`${row}:${col}`];
+		let newBoard = {},
+			asdf = {};
 
-		// another piece already there
-		if (pTarget && !pTarget.canMove(piece))
-			// reset
-			return piece.alignCenter();
-
-		const newBoard = this.state.board.map(v => v.slice());
-
-		newBoard[piece.props.row][piece.props.col] = -1;
-		newBoard[row][col] = piece.props.type;
+		// empty spot or able to move
+		if (pTarget == null || pTarget.canMove(piece)) {
+			newBoard = this.state.board.map(v => v.slice());
+			newBoard[piece.props.row][piece.props.col] = -1;
+			newBoard[row][col] = piece.props.type;
+		}
+		// reset
+		else asdf = piece.alignCenter();
 
 		this.setState({
-			board: newBoard
+			...newBoard,
+			highlights: {}
 		});
+
+		return asdf;
 	}
 }
