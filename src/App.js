@@ -174,12 +174,9 @@ export default class App extends Component {
 		);
 	}
 	componentDidMount() {
-		this.updateBackground();
+		this.drawBackground();
 	}
-	componentDidUpdate() {
-		this.updateBackground();
-	}
-	updateBackground() {
+	drawBackground() {
 		const bg = this.refs.bg,
 			ctx = bg.getContext('2d'),
 			cols = this.state.board[0].length,
@@ -189,8 +186,7 @@ export default class App extends Component {
 
 		for (let r = rows, c; r--;) {
 			for (c = cols; c--;) {
-				ctx.fillStyle = this.state.highlights[`${r}:${c}`] ? 'blue' :
-					(r + c) & 1 ? 'green' : 'lightgreen';
+				ctx.fillStyle = (r + c) & 1 ? 'green' : 'lightgreen';
 				ctx.fillRect(c*this.wCell, r*this.hCell, this.wCell, this.hCell);
 			}
 		}
@@ -217,23 +213,19 @@ export default class App extends Component {
 		const col = Math.round(pos.x/this.wCell),
 			row = Math.round(pos.y/this.hCell),
 			pTarget = this.currentMap[`${row}:${col}`];
-		let newBoard = {},
-			asdf = {};
 
 		// empty spot or able to move
 		if (pTarget == null || pTarget.canMove(piece)) {
-			newBoard = this.state.board.map(v => v.slice());
+			const newBoard = this.state.board.map(v => v.slice());
 			newBoard[piece.props.row][piece.props.col] = -1;
 			newBoard[row][col] = piece.props.type;
+
+			this.setState({
+				board: newBoard,
+				highlights: {}
+			});
 		}
 		// reset
-		else asdf = piece.alignCenter();
-
-		this.setState({
-			...newBoard,
-			highlights: {}
-		});
-
-		return asdf;
+		else return piece.alignCenter();
 	}
 }
