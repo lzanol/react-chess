@@ -86,11 +86,11 @@ class Piece extends InteractiveView {
 	static SYMBOLS = ['\u2659', '\u2656', '\u2658', '\u2657', '\u2655', '\u2654',
 		'\u265F', '\u265C', '\u265E', '\u265D', '\u265B', '\u265A'];
 
-	constructor() {
-		super();
+	constructor(props) {
+		super(props);
 
-		this.width = 40;
-		this.height = 40;
+		this.width = props.wCell - 8;
+		this.height = props.hCell - 8;
 	}
 	componentWillMount() {
 		this.isWhite = this.props.type < 6;
@@ -99,7 +99,7 @@ class Piece extends InteractiveView {
 		const pos = this.alignCenter(this.props.col, this.props.row);
 
 		return <div ref={this.onRenderElement} className='interactive-view' style={{
-			fontSize: '32px',
+			fontSize: `${this.width*.75}px`,
 			textAlign: 'center',
 			textShadow: '0 0 10px #FFFFFF',
 			//backgroundColor: 'red',
@@ -130,6 +130,10 @@ class Piece extends InteractiveView {
 }
 
 export default class App extends Component {
+	// MUST be an exponent of two
+	static TILE_SIZE = 64;
+	static BITS_EXP = Math.log(App.TILE_SIZE)/Math.log(2);
+
 	constructor() {
 		super();
 
@@ -146,11 +150,11 @@ export default class App extends Component {
 			],
 			highlights: false
 		};
-		
-		this.width = 380;
-		this.height = 380;
-		this.wCell = this.width/this.state.board[0].length;
-		this.hCell = this.height/this.state.board.length;
+
+		this.wCell = App.TILE_SIZE;
+		this.hCell = App.TILE_SIZE;
+		this.width = this.wCell*this.state.board[0].length;
+		this.height = this.hCell*this.state.board.length;
 
 		this.onPieceMove = this.onPieceMove.bind(this);
 		this.onPieceRelease = this.onPieceRelease.bind(this);
@@ -167,8 +171,8 @@ export default class App extends Component {
 					onRelease={this.onPieceRelease} /> : null));
 
 		return (
-			<div className='wrapper'>
-				<canvas ref="bg" width={this.width} height={this.height} />
+			<div className='wrapper' ref='container'>
+				<canvas ref='bg' width={this.width} height={this.height} />
 				{pieces}
 			</div>
 		);
@@ -187,7 +191,7 @@ export default class App extends Component {
 		for (let r = rows, c; r--;) {
 			for (c = cols; c--;) {
 				ctx.fillStyle = (r + c) & 1 ? 'green' : 'lightgreen';
-				ctx.fillRect(c*this.wCell, r*this.hCell, this.wCell, this.hCell);
+				ctx.fillRect(c << App.BITS_EXP, r << App.BITS_EXP, this.wCell, this.hCell);
 			}
 		}
 
@@ -204,14 +208,13 @@ export default class App extends Component {
 		this.rowLastMoved = row;
 		this.colLastMoved = col;
 
-		this.setState({
-			...this.state,
-			highlights: { [`${row}:${col}`]: true }
-		});
+		// TODO: highlight cell
 	}
 	onPieceRelease(piece, pos) {
 		const col = Math.round(pos.x/this.wCell),
 			row = Math.round(pos.y/this.hCell),
+		//const col = pos.x >> App.BITS_EXP,
+			//row = pos.y >> App.BITS_EXP,
 			pTarget = this.currentMap[`${row}:${col}`];
 
 		// empty spot or able to move
@@ -221,8 +224,8 @@ export default class App extends Component {
 			newBoard[row][col] = piece.props.type;
 
 			this.setState({
-				board: newBoard,
-				highlights: {}
+				board: newBoard
+				//highlights: {}
 			});
 		}
 		// reset
