@@ -59,6 +59,7 @@ class InteractiveView extends Component {
 	touchHandler(e) {
 		this.xi = e.clientX - this.element.offsetLeft;
 		this.yi = e.clientY - this.element.offsetTop;
+		this.element.style.zIndex = 1;
 
 		this.props.onTouch(this);
 		document.addEventListener('mousemove', this.moveHandler);
@@ -79,6 +80,7 @@ class InteractiveView extends Component {
 		document.removeEventListener('mousemove', this.moveHandler);
 		document.removeEventListener('mouseup', this.releaseHandler);
 		this.position = {...this.position, ...this.props.onRelease(this, this.position)};
+		this.element.style.zIndex = 0;
 	}
 }
 
@@ -92,11 +94,10 @@ class Piece extends InteractiveView {
 		this.width = props.wCell - 8;
 		this.height = props.hCell - 8;
 	}
-	componentWillMount() {
-		this.isWhite = this.props.type < 6;
-	}
 	render() {
 		const pos = this.alignCenter(this.props.col, this.props.row);
+
+		this.isWhite = this.props.type < 6;
 
 		return <div ref={this.onRenderElement} className='interactive-view' style={{
 			fontSize: `${this.width*.75}px`,
@@ -122,7 +123,7 @@ class Piece extends InteractiveView {
 		};
 	}
 	canMove(piece) {
-		// different place
+		// moved to different place
 		return (this.props.row !== piece.props.row || this.props.col !== piece.props.col)
 			// different team
 			&& this.isWhite !== piece.isWhite;
@@ -132,6 +133,7 @@ class Piece extends InteractiveView {
 export default class App extends Component {
 	// MUST be an exponent of two
 	static TILE_SIZE = 64;
+	static TILE_SIZE_HALF = App.TILE_SIZE >> 1;
 	static BITS_EXP = Math.log(App.TILE_SIZE)/Math.log(2);
 
 	constructor() {
@@ -211,10 +213,10 @@ export default class App extends Component {
 		// TODO: highlight cell
 	}
 	onPieceRelease(piece, pos) {
-		const col = Math.round(pos.x/this.wCell),
-			row = Math.round(pos.y/this.hCell),
-		//const col = pos.x >> App.BITS_EXP,
-			//row = pos.y >> App.BITS_EXP,
+		//const col = Math.round(pos.x/this.wCell),
+			//row = Math.round(pos.y/this.hCell),
+		const col = (pos.x + App.TILE_SIZE_HALF) >> App.BITS_EXP,
+			row = (pos.y + App.TILE_SIZE_HALF) >> App.BITS_EXP,
 			pTarget = this.currentMap[`${row}:${col}`];
 
 		// empty spot or able to move
