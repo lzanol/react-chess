@@ -1,3 +1,11 @@
+* {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
 .wrapper {
 	position: relative;
 	left: 30px;
@@ -8,10 +16,7 @@
 	left: 0;
 	top: 0;
 	cursor: pointer;
-	-webkit-touch-callout: none;
-	-webkit-user-select: none;
-	-khtml-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
+}
+.highlight {
+	position: absolute;
 }

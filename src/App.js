@@ -79,7 +79,12 @@ class InteractiveView extends Component {
 	releaseHandler(e) {
 		document.removeEventListener('mousemove', this.moveHandler);
 		document.removeEventListener('mouseup', this.releaseHandler);
-		this.position = {...this.position, ...this.props.onRelease(this, this.position)};
+		
+		this.position = {
+			...this.position,
+			...this.props.onRelease(this, this.position)
+		};
+
 		this.element.style.zIndex = 0;
 	}
 }
@@ -122,11 +127,59 @@ class Piece extends InteractiveView {
 			y: this.props.hCell*row + (this.props.hCell - this.height)/2
 		};
 	}
-	canMove(piece) {
+	canMove(col, row, mapping) {
+		const piece = mapping[`${row}:${col}`],
+			dc = Math.abs(this.props.col - col),
+			dr = Math.abs(this.props.row - row);
+		
+		const hasPieceOnTheWay = (isValidMove) => {
+			if (!isValidMove) return false;
+
+			const colInc = dc === 0 ? 0 : this.props.col > col ? -1 : 1,
+				rowInc = dr === 0 ? 0 : this.props.row > row ? -1 : 1,
+				t = dc > 0 ? dc : dr;
+
+			for (let i = 1, c = this.props.col + colInc, r = this.props.row + rowInc; i < t; ++i, c += colInc, r += rowInc)
+				if (mapping[`${r}:${c}`])
+					return false;
+
+			return true;
+		};
+
 		// moved to different place
-		return (this.props.row !== piece.props.row || this.props.col !== piece.props.col)
-			// different team
-			&& this.isWhite !== piece.isWhite;
+		let isValid = (dc > 0 || dr > 0) &&
+			// empty cell or piece belongs to different team
+			(piece == null || this.isWhite !== piece.isWhite);
+
+		if (!isValid)
+			return false;
+
+		// is valid piece move
+		switch (this.props.type) {
+			// bishop
+			case 3:
+			case 9:
+				isValid = hasPieceOnTheWay(dc === dr);
+				break;
+
+			// rook
+			case 1:
+			case 7:
+				isValid = hasPieceOnTheWay((dc > 0 && dr === 0) ||
+					(dc === 0 && dr > 0));
+				break;
+
+			// queen
+			case 4:
+			case 10:
+				isValid = hasPieceOnTheWay(dc === dr ||
+					(dc > 0 && dr === 0) ||
+					(dc === 0 && dr > 0));
+				break;
+			default: break;
+		}
+
+		return isValid;
 	}
 }
 
@@ -150,7 +203,7 @@ export default class App extends Component {
 				[6,6,6,6,6,6,6,6],
 				[7,8,9,10,11,9,8,7]
 			],
-			highlights: false
+			highlight: null
 		};
 
 		this.wCell = App.TILE_SIZE;
@@ -168,13 +221,28 @@ export default class App extends Component {
 			v.map((v,col) =>
 				v > -1 ? <Piece ref={v => { if (v) this.currentMap[`${v.props.row}:${v.props.col}`] = v }}
 					type={v} col={col} row={row} wCell={this.wCell} hCell={this.hCell}
-					bounds={{x: 0, y: 0, width: this.width, height: this.height}}
+					bounds={{
+						x: 0,
+						y: 0,
+						width: this.width,
+						height: this.height
+					}}
 					onMove={this.onPieceMove}
 					onRelease={this.onPieceRelease} /> : null));
+
+		const highlight = this.state.highlight ? <div className='highlight'
+			style={{
+				width: this.wCell,
+				height: this.hCell,
+				left: this.state.highlight.col*this.wCell,
+				top: this.state.highlight.row*this.hCell,
+				backgroundColor: this.state.highlight.color
+			}} /> : null
 
 		return (
 			<div className='wrapper' ref='container'>
 				<canvas ref='bg' width={this.width} height={this.height} />
+				{highlight}
 				{pieces}
 			</div>
 		);
@@ -203,34 +271,44 @@ export default class App extends Component {
 		const row = Math.round(pos.y/this.hCell),
 			col = Math.round(pos.x/this.wCell);
 
-		if ((row === piece.props.row && col === piece.props.col) ||
-			(row === this.rowLastMoved && col === this.colLastMoved))
+		if (row === this.lastMovedRow && col === this.lastMovedCol)
 			return;
 
-		this.rowLastMoved = row;
-		this.colLastMoved = col;
+		this.lastMovedCol = col;
+		this.lastMovedRow = row;
 
-		// TODO: highlight cell
+		this.setState({
+			...this.state,
+			highlight: row !== piece.props.row || col !== piece.props.col ? {
+				col: col,
+				row: row,
+				color: this.canMove(col, row, piece) ? '#09c' : '#c60'
+			} : null
+		});
 	}
 	onPieceRelease(piece, pos) {
 		//const col = Math.round(pos.x/this.wCell),
 			//row = Math.round(pos.y/this.hCell),
 		const col = (pos.x + App.TILE_SIZE_HALF) >> App.BITS_EXP,
-			row = (pos.y + App.TILE_SIZE_HALF) >> App.BITS_EXP,
-			pTarget = this.currentMap[`${row}:${col}`];
+			row = (pos.y + App.TILE_SIZE_HALF) >> App.BITS_EXP;
+		
+		let state = {
+			highlight: null
+		}, initCoords = null;
 
-		// empty spot or able to move
-		if (pTarget == null || pTarget.canMove(piece)) {
-			const newBoard = this.state.board.map(v => v.slice());
-			newBoard[piece.props.row][piece.props.col] = -1;
-			newBoard[row][col] = piece.props.type;
-
-			this.setState({
-				board: newBoard
-				//highlights: {}
-			});
+		if (this.canMove(col, row, piece)) {
+			state.board = this.state.board.map(v => v.slice());
+			state.board[piece.props.row][piece.props.col] = -1;
+			state.board[row][col] = piece.props.type;
 		}
 		// reset
-		else return piece.alignCenter();
+		else initCoords = piece.alignCenter();
+		
+		this.setState(state);
+
+		return initCoords;
+	}
+	canMove(col, row, piece) {
+		return piece.canMove(col, row, this.currentMap);
 	}
 }
