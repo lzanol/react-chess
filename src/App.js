@@ -130,11 +130,11 @@ class Piece extends InteractiveView {
 	canMove(col, row, mapping) {
 		const piece = mapping[`${row}:${col}`],
 			dc = Math.abs(this.props.col - col),
-			dr = Math.abs(this.props.row - row);
+			dr = Math.abs(this.props.row - row),
+			type = this.props.type;
 		
-		const hasPieceOnTheWay = (isValidMove) => {
-			if (!isValidMove) return false;
-
+		// except for knight
+		const noPiecesOnTheWay = () => {
 			const colInc = dc === 0 ? 0 : this.props.col > col ? -1 : 1,
 				rowInc = dr === 0 ? 0 : this.props.row > row ? -1 : 1,
 				t = dc > 0 ? dc : dr;
@@ -146,36 +146,75 @@ class Piece extends InteractiveView {
 			return true;
 		};
 
-		// moved to different place
-		let isValid = (dc > 0 || dr > 0) &&
-			// empty cell or piece belongs to different team
-			(piece == null || this.isWhite !== piece.isWhite);
-
-		if (!isValid)
+		// has not moved
+		if ((dc === 0 && dr === 0) ||
+			// piece in a non empty cell belongs to same team
+			(piece != null && this.isWhite === piece.isWhite))
+			// invalid move
 			return false;
 
-		// is valid piece move
-		switch (this.props.type) {
+		let isValid = true;
+
+		// validate move
+		switch (type) {
 			// bishop
 			case 3:
 			case 9:
-				isValid = hasPieceOnTheWay(dc === dr);
+				// diagonals
+				isValid = dc === dr &&
+					noPiecesOnTheWay();
 				break;
 
 			// rook
 			case 1:
 			case 7:
-				isValid = hasPieceOnTheWay((dc > 0 && dr === 0) ||
-					(dc === 0 && dr > 0));
+				// horiontals and verticals
+				isValid = ((dc > 0 && dr === 0) ||
+					(dc === 0 && dr > 0)) &&
+					noPiecesOnTheWay();
 				break;
 
 			// queen
 			case 4:
 			case 10:
-				isValid = hasPieceOnTheWay(dc === dr ||
+				// diagonals, horiontals and verticals
+				isValid = (dc === dr ||
 					(dc > 0 && dr === 0) ||
-					(dc === 0 && dr > 0));
+					(dc === 0 && dr > 0)) &&
+					noPiecesOnTheWay();
 				break;
+
+			// king
+			case 5:
+			case 11:
+				// one cell at a time
+				isValid = dc <= 1 && dr <= 1 &&
+					// diagonals, horiontals and verticals
+					(dc === dr ||
+					(dc > 0 && dr === 0) ||
+					(dc === 0 && dr > 0)) &&
+					noPiecesOnTheWay();
+				break;
+
+			// pawn
+			case 0:
+			case 6:
+				// back and forth only
+				isValid = dc === 0 &&
+					// can move one cell or two if never moved
+					(dr === 1 || (dr === 2 && this.props.row === (type === 0 ? 1 : 6))) &&
+					// always forward
+					(type === 0 ^ this.props.row > row) &&
+					noPiecesOnTheWay();
+				break;
+
+			case 2:
+			case 8:
+				// back and forth only
+				isValid = (dc === 1 && dr === 2) ||
+					(dc === 2 && dr === 1)
+				break;
+
 			default: break;
 		}
 
