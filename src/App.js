@@ -153,6 +153,7 @@ class Piece extends InteractiveView {
 			// invalid move
 			return false;
 
+		const isEnemy = this.getIsEnemy(piece);
 		let isValid = true;
 
 		// validate move
@@ -199,26 +200,34 @@ class Piece extends InteractiveView {
 			// pawn
 			case 0:
 			case 6:
-				// back and forth only
-				isValid = dc === 0 &&
+				// must be empty
+				isValid = ((piece == null &&
+					// verticals only
+					dc === 0 &&
 					// can move one cell or two if never moved
 					(dr === 1 || (dr === 2 && this.props.row === (type === 0 ? 1 : 6))) &&
+					noPiecesOnTheWay()) ||
+					// or one step diagonal if enemy
+					((dc === 1 && dr === 1) && isEnemy)) &&
 					// always forward
-					(type === 0 ^ this.props.row > row) &&
-					noPiecesOnTheWay();
+					Boolean(type === 0 ^ this.props.row > row);
 				break;
 
+			// knight
 			case 2:
 			case 8:
 				// back and forth only
 				isValid = (dc === 1 && dr === 2) ||
-					(dc === 2 && dr === 1)
+					(dc === 2 && dr === 1);
 				break;
 
 			default: break;
 		}
 
 		return isValid;
+	}
+	getIsEnemy(piece) {
+		return piece != null && this.isWhite !== piece.isWhite;
 	}
 }
 
@@ -336,6 +345,9 @@ export default class App extends Component {
 		}, initCoords = null;
 
 		if (this.canMove(col, row, piece)) {
+			if (piece.getIsEnemy(this.currentMap[`${row}:${col}`]))
+				console.info('score:', piece.isWhite ? 'white' : 'black');
+
 			state.board = this.state.board.map(v => v.slice());
 			state.board[piece.props.row][piece.props.col] = -1;
 			state.board[row][col] = piece.props.type;
