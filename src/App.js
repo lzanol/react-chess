@@ -251,7 +251,8 @@ export default class App extends Component {
 				[6,6,6,6,6,6,6,6],
 				[7,8,9,10,11,9,8,7]
 			],
-			highlight: null
+			highlight: null,
+			players: [0,0]
 		};
 
 		this.wCell = App.TILE_SIZE;
@@ -339,14 +340,19 @@ export default class App extends Component {
 			//row = Math.round(pos.y/this.hCell),
 		const col = (pos.x + App.TILE_SIZE_HALF) >> App.BITS_EXP,
 			row = (pos.y + App.TILE_SIZE_HALF) >> App.BITS_EXP;
-		
-		let state = {
+
+		const state = {
+			...this.state,
 			highlight: null
-		}, initCoords = null;
+		};
+
+		let initCoords = null;
 
 		if (this.canMove(col, row, piece)) {
-			if (piece.getIsEnemy(this.currentMap[`${row}:${col}`]))
-				console.info('score:', piece.isWhite ? 'white' : 'black');
+			if (piece.getIsEnemy(this.currentMap[`${row}:${col}`])) {
+				state.players = state.players.slice();
+				++state.players[+!piece.isWhite];
+			}
 
 			state.board = this.state.board.map(v => v.slice());
 			state.board[piece.props.row][piece.props.col] = -1;
