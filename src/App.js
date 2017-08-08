@@ -233,7 +233,7 @@ class Piece extends InteractiveView {
 
 export default class App extends Component {
 	// MUST be an exponent of two
-	static TILE_SIZE = 64;
+	static TILE_SIZE = 32;
 	static TILE_SIZE_HALF = App.TILE_SIZE >> 1;
 	static BITS_EXP = Math.log(App.TILE_SIZE)/Math.log(2);
 
@@ -252,7 +252,8 @@ export default class App extends Component {
 				[7,8,9,10,11,9,8,7]
 			],
 			highlight: null,
-			players: [0,0]
+			players: [0,0],
+			isWhiteTurn: true
 		};
 
 		this.wCell = App.TILE_SIZE;
@@ -276,6 +277,7 @@ export default class App extends Component {
 						width: this.width,
 						height: this.height
 					}}
+					enabled={this.state.isWhiteTurn ^ v >= 6}
 					onMove={this.onPieceMove}
 					onRelease={this.onPieceRelease} /> : null));
 
@@ -293,6 +295,10 @@ export default class App extends Component {
 				<canvas ref='bg' width={this.width} height={this.height} />
 				{highlight}
 				{pieces}
+				<div>
+					<div><strong>Player 1:</strong> {this.state.players[0]} pts</div>
+					<div><strong>Player 2:</strong> {this.state.players[1]} pts</div>
+				</div>
 			</div>
 		);
 	}
@@ -357,6 +363,7 @@ export default class App extends Component {
 			state.board = this.state.board.map(v => v.slice());
 			state.board[piece.props.row][piece.props.col] = -1;
 			state.board[row][col] = piece.props.type;
+			state.isWhiteTurn = !state.isWhiteTurn;
 		}
 		// reset
 		else initCoords = piece.alignCenter();
