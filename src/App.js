@@ -54,7 +54,7 @@ class InteractiveView extends Component {
 			return;
 
 		this.element = element;
-		element.addEventListener('mousedown', this.touchHandler);
+		//element.addEventListener('mousedown', this.touchHandler);
 	}
 	touchHandler(e) {
 		this.xi = e.clientX - this.element.offsetLeft;
@@ -104,10 +104,12 @@ class Piece extends InteractiveView {
 
 		this.isWhite = this.props.type < 6;
 
-		return <div ref={this.onRenderElement} className='interactive-view' style={{
+		return <div ref={this.onRenderElement} className='interactive-view'
+			onMouseDown={this.props.enabled ? this.touchHandler : null} style={{
 			fontSize: `${this.width*.75}px`,
 			textAlign: 'center',
 			textShadow: '0 0 10px #FFFFFF',
+			cursor: this.props.enabled ? 'pointer' : 'default',
 			//backgroundColor: 'red',
 			width: `${this.width}px`,
 			height: `${this.height}px`,
@@ -252,7 +254,13 @@ export default class App extends Component {
 				[7,8,9,10,11,9,8,7]
 			],
 			highlight: null,
-			players: [0,0],
+			players: [{
+				score: 0,
+				piecesWon: []
+			},{
+				score: 0,
+				piecesWon: []
+			}],
 			isWhiteTurn: true
 		};
 
@@ -296,8 +304,13 @@ export default class App extends Component {
 				{highlight}
 				{pieces}
 				<div>
-					<div><strong>Player 1:</strong> {this.state.players[0]} pts</div>
-					<div><strong>Player 2:</strong> {this.state.players[1]} pts</div>
+					<div><strong>Player 1:</strong> {this.state.players[0].score} pts</div>
+					<div>{this.state.players[0].piecesWon.map(v =>
+						Piece.SYMBOLS[v])}</div>
+					<div><strong>Player 2:</strong> {this.state.players[1].score} pts</div>
+					<div>{this.state.players[1].piecesWon.map(v =>
+						Piece.SYMBOLS[v])}</div>
+					<div>{this.state.isWhiteTurn ? 'White turn' : 'Black turn'}</div>
 				</div>
 			</div>
 		);
@@ -357,7 +370,15 @@ export default class App extends Component {
 		if (this.canMove(col, row, piece)) {
 			if (piece.getIsEnemy(this.currentMap[`${row}:${col}`])) {
 				state.players = state.players.slice();
-				++state.players[+!piece.isWhite];
+
+				const index = +!piece.isWhite;
+				const player = state.players[index];
+
+				state.players[index] = {
+					...player,
+					score: player.score + 1,
+					piecesWon: player.piecesWon.concat([state.board[row][col]])
+				}
 			}
 
 			state.board = this.state.board.map(v => v.slice());
