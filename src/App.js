@@ -54,7 +54,6 @@ class InteractiveView extends Component {
 			return;
 
 		this.element = element;
-		//element.addEventListener('mousedown', this.touchHandler);
 	}
 	touchHandler(e) {
 		this.xi = e.clientX - this.element.offsetLeft;
@@ -136,7 +135,7 @@ class Piece extends InteractiveView {
 			type = this.props.type;
 		
 		// except for knight
-		const noPiecesOnTheWay = () => {
+		const hasNoPiecesOnTheWay = () => {
 			const colInc = dc === 0 ? 0 : this.props.col > col ? -1 : 1,
 				rowInc = dr === 0 ? 0 : this.props.row > row ? -1 : 1,
 				t = dc > 0 ? dc : dr;
@@ -165,7 +164,7 @@ class Piece extends InteractiveView {
 			case 9:
 				// diagonals
 				isValid = dc === dr &&
-					noPiecesOnTheWay();
+					hasNoPiecesOnTheWay();
 				break;
 
 			// rook
@@ -174,7 +173,7 @@ class Piece extends InteractiveView {
 				// horiontals and verticals
 				isValid = ((dc > 0 && dr === 0) ||
 					(dc === 0 && dr > 0)) &&
-					noPiecesOnTheWay();
+					hasNoPiecesOnTheWay();
 				break;
 
 			// queen
@@ -184,7 +183,7 @@ class Piece extends InteractiveView {
 				isValid = (dc === dr ||
 					(dc > 0 && dr === 0) ||
 					(dc === 0 && dr > 0)) &&
-					noPiecesOnTheWay();
+					hasNoPiecesOnTheWay();
 				break;
 
 			// king
@@ -196,7 +195,7 @@ class Piece extends InteractiveView {
 					(dc === dr ||
 					(dc > 0 && dr === 0) ||
 					(dc === 0 && dr > 0)) &&
-					noPiecesOnTheWay();
+					hasNoPiecesOnTheWay();
 				break;
 
 			// pawn
@@ -208,7 +207,7 @@ class Piece extends InteractiveView {
 					dc === 0 &&
 					// can move one cell or two if never moved
 					(dr === 1 || (dr === 2 && this.props.row === (type === 0 ? 1 : 6))) &&
-					noPiecesOnTheWay()) ||
+					hasNoPiecesOnTheWay()) ||
 					// or one step diagonal if enemy
 					((dc === 1 && dr === 1) && isEnemy)) &&
 					// always forward
@@ -305,11 +304,11 @@ export default class App extends Component {
 				{pieces}
 				<div>
 					<div><strong>Player 1:</strong> {this.state.players[0].score} pts</div>
-					<div>{this.state.players[0].piecesWon.map(v =>
-						Piece.SYMBOLS[v])}</div>
+					<div>{this.state.players[0].piecesWon
+						.map(v => Piece.SYMBOLS[v])}</div>
 					<div><strong>Player 2:</strong> {this.state.players[1].score} pts</div>
-					<div>{this.state.players[1].piecesWon.map(v =>
-						Piece.SYMBOLS[v])}</div>
+					<div>{this.state.players[1].piecesWon
+						.map(v => Piece.SYMBOLS[v])}</div>
 					<div>{this.state.isWhiteTurn ? 'White turn' : 'Black turn'}</div>
 				</div>
 			</div>
@@ -371,13 +370,18 @@ export default class App extends Component {
 			if (piece.getIsEnemy(this.currentMap[`${row}:${col}`])) {
 				state.players = state.players.slice();
 
-				const index = +!piece.isWhite;
-				const player = state.players[index];
+				const playerIndex = +!piece.isWhite;
+				const player = state.players[playerIndex];
+				const enemyIndex = state.board[row][col];
 
-				state.players[index] = {
+				state.players[playerIndex] = {
 					...player,
 					score: player.score + 1,
-					piecesWon: player.piecesWon.concat([state.board[row][col]])
+					piecesWon: player.piecesWon.concat([enemyIndex])
+				}
+
+				if (enemyIndex === 5 || enemyIndex === 11) {
+					// end game
 				}
 			}
 
