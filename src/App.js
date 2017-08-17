@@ -237,32 +237,33 @@ export default class App extends Component {
 	static TILE_SIZE = 32;
 	static TILE_SIZE_HALF = App.TILE_SIZE >> 1;
 	static BITS_EXP = Math.log(App.TILE_SIZE)/Math.log(2);
+	static INITIAL_STATE = {
+		board: [
+			[1,2,3,4,5,3,2,1],
+			[0,0,0,0,0,0,0,0],
+			[-1,-1,-1,-1,-1,-1,-1,-1],
+			[-1,-1,-1,-1,-1,-1,-1,-1],
+			[-1,-1,-1,-1,-1,-1,-1,-1],
+			[-1,-1,-1,-1,-1,-1,-1,-1],
+			[6,6,6,6,6,6,6,6],
+			[7,8,9,10,11,9,8,7]
+		],
+		highlight: null,
+		players: [{
+			score: 0,
+			piecesWon: []
+		},{
+			score: 0,
+			piecesWon: []
+		}],
+		isWhiteTurn: true,
+		isGameOver: false
+	};
 
 	constructor() {
 		super();
 
-		this.state = {
-			board: [
-				[1,2,3,4,5,3,2,1],
-				[0,0,0,0,0,0,0,0],
-				[-1,-1,-1,-1,-1,-1,-1,-1],
-				[-1,-1,-1,-1,-1,-1,-1,-1],
-				[-1,-1,-1,-1,-1,-1,-1,-1],
-				[-1,-1,-1,-1,-1,-1,-1,-1],
-				[6,6,6,6,6,6,6,6],
-				[7,8,9,10,11,9,8,7]
-			],
-			highlight: null,
-			players: [{
-				score: 0,
-				piecesWon: []
-			},{
-				score: 0,
-				piecesWon: []
-			}],
-			isWhiteTurn: true
-		};
-
+		this.state = App.INITIAL_STATE;
 		this.wCell = App.TILE_SIZE;
 		this.hCell = App.TILE_SIZE;
 		this.width = this.wCell*this.state.board[0].length;
@@ -297,6 +298,16 @@ export default class App extends Component {
 				backgroundColor: this.state.highlight.color
 			}} /> : null
 
+		const gameOver = this.state.isGameOver ? <div className='game-over'
+			onClick={() => this.setState(App.INITIAL_STATE)}
+			style={{
+				width: this.width,
+				height: this.height,
+				fontSize: `${this.wCell*.75}px`,
+				paddingTop: `${this.height*.1}px`
+			}}><strong>{this.state.isWhiteTurn ? 'Black' : 'White'} won!</strong><br/>
+				Tap to restart</div> : null
+
 		return (
 			<div className='wrapper' ref='container'>
 				<canvas ref='bg' width={this.width} height={this.height} />
@@ -311,6 +322,7 @@ export default class App extends Component {
 						.map(v => Piece.SYMBOLS[v])}</div>
 					<div>{this.state.isWhiteTurn ? 'White turn' : 'Black turn'}</div>
 				</div>
+				{gameOver}
 			</div>
 		);
 	}
@@ -380,9 +392,8 @@ export default class App extends Component {
 					piecesWon: player.piecesWon.concat([enemyIndex])
 				}
 
-				if (enemyIndex === 5 || enemyIndex === 11) {
-					// end game
-				}
+				if (enemyIndex === 5 || enemyIndex === 11)
+					state.isGameOver = true;
 			}
 
 			state.board = this.state.board.map(v => v.slice());

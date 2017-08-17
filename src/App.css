@@ -21,3 +21,13 @@
 .highlight {
 	position: absolute;
 }
+.game-over {
+	position: absolute;
+	top: 0;
+	left: 0;
+	box-sizing: border-box;
+	text-align: center;
+	background-color: white;
+	opacity: .8;
+	cursor: pointer;
+}
