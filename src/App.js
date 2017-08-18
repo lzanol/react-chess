@@ -234,7 +234,7 @@ class Piece extends InteractiveView {
 
 export default class App extends Component {
 	// MUST be an exponent of two
-	static TILE_SIZE = 32;
+	static TILE_SIZE = 64;
 	static TILE_SIZE_HALF = App.TILE_SIZE >> 1;
 	static BITS_EXP = Math.log(App.TILE_SIZE)/Math.log(2);
 	static INITIAL_STATE = {
