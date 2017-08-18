@@ -46,8 +46,8 @@ class InteractiveView extends Component {
 	}
 	componentWillUnmount() {
 		this.element.removeEventListener('mousedown', this.touchHandler);
-		document.removeEventListener('mousemove', this.moveHandler);
-		document.removeEventListener('mouseup', this.releaseHandler);
+		this.element.removeEventListener('touchstart', this.touchHandler);
+		this.cleanUp();
 	}
 	onRenderElement(element) {
 		if (!element)
@@ -55,19 +55,39 @@ class InteractiveView extends Component {
 
 		this.element = element;
 	}
+	cleanUp() {
+		document.removeEventListener('mousemove', this.moveHandler);
+		document.removeEventListener('mouseup', this.releaseHandler);
+		document.removeEventListener('touchmove', this.moveHandler);
+		document.removeEventListener('touchend', this.releaseHandler);
+		document.removeEventListener('touchcancel', this.releaseHandler);
+	}
 	touchHandler(e) {
-		this.xi = e.clientX - this.element.offsetLeft;
-		this.yi = e.clientY - this.element.offsetTop;
+		e.preventDefault();
+
+		const x = (e.touches || []).length > 0 ? e.touches[0].pageX : e.clientX,
+			y = (e.touches || []).length > 0 ? e.touches[0].pageY : e.clientY;
+
+		this.xi = x - this.element.offsetLeft;
+		this.yi = y - this.element.offsetTop;
 		this.element.style.zIndex = 1;
 
 		this.props.onTouch(this);
 		document.addEventListener('mousemove', this.moveHandler);
 		document.addEventListener('mouseup', this.releaseHandler);
+		document.addEventListener('touchmove', this.moveHandler);
+		document.addEventListener('touchend', this.releaseHandler);
+		document.addEventListener('touchcancel', this.releaseHandler);
 	}
 	moveHandler(e) {
+		e.preventDefault();
+
+		const x = (e.touches || []).length > 0 ? e.touches[0].pageX : e.clientX,
+			y = (e.touches || []).length > 0 ? e.touches[0].pageY : e.clientY;
+
 		const pos = this.getBoundedPosition({
-			x: e.clientX - this.xi,
-			y: e.clientY - this.yi
+			x: x - this.xi,
+			y: y - this.yi
 		});
 
 		this.position = {
@@ -76,8 +96,7 @@ class InteractiveView extends Component {
 		};
 	}
 	releaseHandler(e) {
-		document.removeEventListener('mousemove', this.moveHandler);
-		document.removeEventListener('mouseup', this.releaseHandler);
+		this.cleanUp();
 		
 		this.position = {
 			...this.position,
@@ -104,7 +123,8 @@ class Piece extends InteractiveView {
 		this.isWhite = this.props.type < 6;
 
 		return <div ref={this.onRenderElement} className='interactive-view'
-			onMouseDown={this.props.enabled ? this.touchHandler : null} style={{
+			onMouseDown={this.props.enabled ? this.touchHandler : null}
+			onTouchStart={this.props.enabled ? this.touchHandler : null} style={{
 			fontSize: `${this.width*.75}px`,
 			textAlign: 'center',
 			textShadow: '0 0 10px #FFFFFF',
@@ -234,7 +254,7 @@ class Piece extends InteractiveView {
 
 export default class App extends Component {
 	// MUST be an exponent of two
-	static TILE_SIZE = 64;
+	static TILE_SIZE = 32;
 	static TILE_SIZE_HALF = App.TILE_SIZE >> 1;
 	static BITS_EXP = Math.log(App.TILE_SIZE)/Math.log(2);
 	static INITIAL_STATE = {
@@ -271,6 +291,7 @@ export default class App extends Component {
 
 		this.onPieceMove = this.onPieceMove.bind(this);
 		this.onPieceRelease = this.onPieceRelease.bind(this);
+		this.reset = this.reset.bind(this);
 	}
 	render() {
 		this.currentMap = {};
@@ -299,7 +320,7 @@ export default class App extends Component {
 			}} /> : null
 
 		const gameOver = this.state.isGameOver ? <div className='game-over'
-			onClick={() => this.setState(App.INITIAL_STATE)}
+			onClick={this.reset}
 			style={{
 				width: this.width,
 				height: this.height,
@@ -321,6 +342,7 @@ export default class App extends Component {
 					<div>{this.state.players[1].piecesWon
 						.map(v => Piece.SYMBOLS[v])}</div>
 					<div>{this.state.isWhiteTurn ? 'White turn' : 'Black turn'}</div>
+					<button onClick={this.reset}>Reset</button>
 				</div>
 				{gameOver}
 			</div>
@@ -410,5 +432,8 @@ export default class App extends Component {
 	}
 	canMove(col, row, piece) {
 		return piece.canMove(col, row, this.currentMap);
+	}
+	reset() {
+		this.setState(App.INITIAL_STATE);
 	}
 }
